@@ -9,11 +9,9 @@ const upload = multer({ dest: 'uploads/' });  // Image upload destination
 // POST route to upload and process poster
 router.post('/', upload.single('poster'), async (req, res) => {
   try {
-    // Log incoming file and description
+    // Log incoming file and description (if necessary)
     console.log('File received:', req.file);
-    console.log('Description received:', req.body.description);
 
-    // Ensure file was received
     if (!req.file) {
       console.error('No file received');
       return res.status(400).json({ error: 'No file uploaded' });
@@ -31,11 +29,15 @@ router.post('/', upload.single('poster'), async (req, res) => {
     const translatedText = await translateText(extractedText);
     console.log('Translated Text:', translatedText);
 
-    // Step 3: Save the poster data to MongoDB
+    // Step 3: Process title and description from the translated text
+    const title = translatedText.split('.')[0].substring(0, 100) || 'Untitled';  // First sentence, max 100 characters
+    const description = translatedText.split('.').slice(1).join('.').trim() || 'No description';  // Rest of the text as description
+
+    // Save the poster data to MongoDB
     const newPoster = new Poster({
       imageUrl: `http://localhost:5000/uploads/${req.file.filename}`,
-      title: translatedText.split('\n')[0] || 'Untitled',  // First line as title
-      description: translatedText.split('\n').slice(1).join(' ') || 'No description'  // Rest as description
+      title: title,
+      description: description,
     });
 
     await newPoster.save();
@@ -46,18 +48,6 @@ router.post('/', upload.single('poster'), async (req, res) => {
   } catch (err) {
     console.error('Error processing poster:', err);
     res.status(500).json({ error: 'Failed to process poster' });
-  }
-});
-
-// GET route to fetch all posters
-router.get('/', async (req, res) => {
-  try {
-    console.log('Fetching all posters from database...');
-    const posters = await Poster.find().sort({ uploadedAt: -1 });
-    res.json(posters);
-  } catch (err) {
-    console.error('Error fetching posters:', err);
-    res.status(500).json({ error: 'Failed to fetch posters' });
   }
 });
 

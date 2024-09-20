@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 function UploadPoster() {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false); // To show loading state
 
   const handleFileChange = (e) => {
@@ -19,13 +18,12 @@ function UploadPoster() {
     }
 
     const formData = new FormData();
-    formData.append('poster', selectedFile);
-    formData.append('description', description);
+    formData.append('poster', selectedFile); // Only the image is uploaded
 
-    setIsSubmitting(true);  // Show loading
+    setIsSubmitting(true);  // Show loading state
 
     try {
-      console.log('Sending data to backend...');
+      console.log('Sending image to backend...');
       const response = await fetch('http://localhost:5000/api/posters', {
         method: 'POST',
         body: formData,
@@ -41,24 +39,17 @@ function UploadPoster() {
 
       // Reset form after successful upload
       setSelectedFile(null);
-      setDescription('');
     } catch (err) {
       console.error('Error uploading poster:', err);
       alert('Error uploading poster. Check console for more details.');
     } finally {
-      setIsSubmitting(false);  // Hide loading
+      setIsSubmitting(false);  // Hide loading state
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <input type="file" accept="image/*" onChange={handleFileChange} required />
-      <input
-        type="text"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Add a description (optional)"
-      />
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Uploading...' : 'Upload Poster'}
       </button>
