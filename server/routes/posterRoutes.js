@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { extractTextFromImage, translateText } = require('../utils/googleApiUtils');
+const { analyzeTextWithNaturalLanguageAPI } = require('../utils/googleNLPUtils');  // Importing NLP utility
 const Poster = require('../models/Poster');
 
 const router = express.Router();
@@ -9,7 +10,6 @@ const upload = multer({ dest: 'uploads/' });  // Image upload destination
 // POST route to upload and process poster
 router.post('/', upload.single('poster'), async (req, res) => {
   try {
-    // Log incoming file and description (if necessary)
     console.log('File received:', req.file);
 
     if (!req.file) {
@@ -18,7 +18,6 @@ router.post('/', upload.single('poster'), async (req, res) => {
     }
 
     const imagePath = req.file.path;
-    
     console.log('Processing image at:', imagePath);
 
     // Step 1: Extract text from the image using Google Vision API
@@ -29,14 +28,17 @@ router.post('/', upload.single('poster'), async (req, res) => {
     const translatedText = await translateText(extractedText);
     console.log('Translated Text:', translatedText);
 
-    // Step 3: Process title and description from the translated text
-    const title = translatedText.split('.')[0].substring(0, 100) || 'Untitled';  // First sentence, max 100 characters
-    const description = translatedText.split('.').slice(1).join('.').trim() || 'No description';  // Rest of the text as description
+    // Step 3: Use Google Natural Language API to generate title, category, and description
+    const { title, category, description } = await analyzeTextWithNaturalLanguageAPI(translatedText);
+    console.log('Generated Title:', title);
+    console.log('Generated Category:', category);
+    console.log('Generated Description:', description);
 
-    // Save the poster data to MongoDB
+    // Step 4: Save the poster data to MongoDB
     const newPoster = new Poster({
       imageUrl: `http://localhost:5000/uploads/${req.file.filename}`,
       title: title,
+      category: category,
       description: description,
     });
 
