@@ -1,26 +1,51 @@
 const express = require('express');
-const Poster = require('../models/Poster');  // Ensure Poster model is imported
+const multer = require('multer');
+const { extractTextFromImage, translateText } = require('../utils/googleApiUtils');
+const { analyzeTextWithNaturalLanguageAPI } = require('../utils/googleNLPUtils');
+const Poster = require('../models/Poster');
+
+// Set up Multer for file uploads
+const upload = multer({ dest: 'uploads/' });  // Destination folder for uploaded files
 
 const router = express.Router();
 
 // POST route to upload and process a poster
-router.post('/', async (req, res) => {
+router.post('/', upload.single('poster'), async (req, res) => {
   try {
+    // Check if a file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
     console.log('File received:', req.file);
 
-    // Assuming the file was uploaded correctly and processed (you can add Multer or other middleware)
-    // This part should process the image, extract text, etc.
+    // Step 1: Extract text from the image using Google Vision API
+    const extractedText = await extractTextFromImage(req.file.path);
+    console.log('Extracted Text from Image:', extractedText);
+
+    // Step 2: Translate the extracted text (if needed)
+    const translatedText = await translateText(extractedText);
+    console.log('Translated Text:', translatedText);
+
+    // Step 3: Use Google Natural Language API to generate title, category, and description
+    const { title, category, description } = await analyzeTextWithNaturalLanguageAPI(translatedText);
+    console.log('Generated Title:', title);
+    console.log('Generated Category:', category);
+    console.log('Generated Description:', description);
+
+    // Create a new poster with the generated title, description, and category
     const newPoster = new Poster({
-      imageUrl: `http://localhost:5000/uploads/${req.file.filename}`,
-      title: 'Sample Title',  // You should replace this with actual logic for title
-      description: 'Sample Description',  // Replace this with the actual logic for description
-      category: 'Sample Category'  // Replace this with logic to generate category
+      imageUrl: `http://localhost:5000/uploads/${req.file.filename}`,  // Use the uploaded file's filename
+      title: title,  // Generated title
+      description: description,  // Generated description
+      category: category,  // Generated category
     });
 
-    await newPoster.save();  // Save the poster to MongoDB
+    // Save the poster to the database
+    await newPoster.save();
     console.log('Poster saved to database:', newPoster);
 
-    // Return success response
+    // Return success response with the poster data
     res.status(200).json({ message: 'Poster uploaded successfully', data: newPoster });
   } catch (err) {
     console.error('Error processing poster:', err);
@@ -33,7 +58,7 @@ router.get('/', async (req, res) => {
   try {
     console.log('Fetching all posters...');
     const posters = await Poster.find();  // Fetch all posters from MongoDB
-    res.status(200).json(posters);  // Send posters in JSON format
+    res.status(200).json(posters);  // Send posters as JSON response
   } catch (err) {
     console.error('Error fetching posters:', err);
     res.status(500).json({ error: 'Failed to fetch posters' });
