@@ -27,11 +27,22 @@ function UploadPoster() {
         body: formData,
       });
 
+      // Log the full response object
+      console.log('Response:', response);
+
       if (!response.ok) {
         throw new Error('Failed to upload');
       }
 
-      alert('Poster uploaded successfully!');
+      const data = await response.json();
+      console.log('Response Data:', data);
+
+      if (data.message === 'Poster uploaded successfully') {
+        alert('Poster uploaded successfully!');
+      } else {
+        throw new Error('Unexpected response format');
+      }
+
       setSelectedFile(null);
     } catch (err) {
       console.error('Error uploading poster:', err);

@@ -2,17 +2,28 @@ import React, { useEffect, useState } from 'react';
 
 function PosterFeed() {
   const [posters, setPosters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function fetchPosters() {
       try {
         const response = await fetch('http://localhost:5000/api/posters');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch posters');
+        }
+
         const data = await response.json();
         setPosters(data);
+        setLoading(false);
       } catch (err) {
         console.error('Error fetching posters:', err);
+        setError('Error fetching posters.');
+        setLoading(false);
       }
     }
+
     fetchPosters();
   }, []);
 
@@ -38,13 +49,6 @@ function PosterFeed() {
       overflow: 'hidden',
       boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
       textAlign: 'center',
-    },
-    image: {
-      width: '100%',
-      height: '200px',
-      objectFit: 'cover',
-    },
-    info: {
       padding: '15px',
     },
     cardTitle: {
@@ -61,18 +65,23 @@ function PosterFeed() {
     },
   };
 
+  if (loading) {
+    return <p>Loading posters...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
+
   return (
     <div style={styles.feedContainer}>
       <h2 style={styles.title}>Poster Feed</h2>
       <div style={styles.grid}>
         {posters.map((poster) => (
           <div key={poster._id} style={styles.card}>
-            <img src={poster.imageUrl} alt={poster.title} style={styles.image} />
-            <div style={styles.info}>
-              <h3 style={styles.cardTitle}>{poster.title}</h3>
-              <p style={styles.description}>{poster.description}</p>
-              <span style={styles.category}>Category: {poster.category}</span>
-            </div>
+            <h3 style={styles.cardTitle}>{poster.title}</h3>
+            <p style={styles.description}>{poster.description}</p>
+            <span style={styles.category}>Category: {poster.category}</span>
           </div>
         ))}
       </div>
